@@ -1,0 +1,576 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flux | File Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #cf4302;
+    --primary-soft: #ff6a21;
+    --black: #000000;
+    --bg-1: #040404;
+    --bg-2: #101010;
+    --text: #f5f5f5;
+    --text-dim: #a7a7a7;
+    --panel: rgba(17, 17, 17, 0.9);
+    --border: rgba(207, 67, 2, 0.32);
+    --ok: #2fd47a;
+    --error: #ff5f5f;
+    --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: 'Manrope', sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 500px at 95% -10%, rgba(207, 67, 2, 0.28), transparent 62%),
+      radial-gradient(900px 420px at -10% 105%, rgba(207, 67, 2, 0.15), transparent 65%),
+      linear-gradient(165deg, var(--black), var(--bg-1) 45%, var(--bg-2));
+    overflow-x: hidden;
+  }
+
+  .noise {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.45) 1px, transparent 0);
+    background-size: 3px 3px;
+    mix-blend-mode: soft-light;
+  }
+
+  .shell {
+    width: min(980px, 100% - 32px);
+    margin: 28px auto 24px;
+    animation: rise 520ms ease;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .logo span { color: var(--primary); }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.86rem;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    padding: 30px;
+    backdrop-filter: blur(8px);
+  }
+
+  .headline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.8rem);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+
+  .headline b { color: var(--primary-soft); font-weight: 700; }
+
+  .intro {
+    color: var(--text-dim);
+    max-width: 62ch;
+    margin-bottom: 22px;
+  }
+
+  #drop-zone {
+    border: 2px dashed rgba(207, 67, 2, 0.4);
+    background: rgba(8, 8, 8, 0.92);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 220ms ease, background 180ms ease;
+  }
+
+  #drop-zone:hover,
+  #drop-zone.drag-over {
+    transform: translateY(-2px);
+    border-color: var(--primary-soft);
+    box-shadow: 0 0 0 1px rgba(207, 67, 2, 0.35), 0 14px 32px rgba(207, 67, 2, 0.18);
+    background: rgba(13, 10, 9, 0.95);
+  }
+
+  .drop-mark {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 11px;
+    border-radius: 14px;
+    border: 1px solid rgba(207, 67, 2, 0.45);
+    display: grid;
+    place-items: center;
+    color: var(--primary-soft);
+    font-size: 1.65rem;
+    font-weight: 700;
+  }
+
+  .drop-title { font-weight: 700; margin-bottom: 6px; }
+  .drop-sub { color: var(--text-dim); font-size: 0.93rem; }
+  #file-input { display: none; }
+
+  .status {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(10, 10, 10, 0.9);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-height: 50px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #666;
+    flex: 0 0 auto;
+  }
+
+  .dot.active { background: var(--primary-soft); animation: pulse 1.1s infinite; }
+  .dot.success { background: var(--ok); }
+  .dot.error { background: var(--error); }
+
+  .status-main { font-weight: 600; }
+  .status-sub {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+  }
+
+  .panel {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    background: rgba(6, 6, 6, 0.78);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .row:last-child { margin-bottom: 0; }
+  .label { color: var(--text-dim); }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(207, 67, 2, 0.2);
+    border: 1px solid rgba(207, 67, 2, 0.45);
+    color: #ffd6c3;
+    font-size: 0.82rem;
+  }
+
+  .section-title {
+    margin: 20px 0 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-size: 0.82rem;
+  }
+
+  .format-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+    gap: 9px;
+  }
+
+  .format-btn {
+    border: 1px solid rgba(207, 67, 2, 0.4);
+    border-radius: 11px;
+    padding: 10px 8px;
+    background: rgba(12, 12, 12, 0.9);
+    color: #f6f6f6;
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+  }
+
+  .format-btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary-soft);
+    background: rgba(20, 12, 9, 0.95);
+  }
+
+  .format-btn.selected {
+    border-color: var(--primary-soft);
+    background: linear-gradient(140deg, rgba(207, 67, 2, 0.45), rgba(95, 31, 2, 0.7));
+  }
+
+  #convert-btn,
+  #download-link,
+  .reset-btn {
+    border: 0;
+    border-radius: 11px;
+    padding: 12px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 140ms ease, opacity 140ms ease;
+  }
+
+  #convert-btn {
+    margin-top: 15px;
+    width: 100%;
+    background: linear-gradient(145deg, var(--primary-soft), var(--primary));
+    color: #120700;
+  }
+
+  #convert-btn:hover,
+  #download-link:hover,
+  .reset-btn:hover { transform: translateY(-1px); }
+
+  #convert-btn:disabled {
+    background: #4f413b;
+    color: #d2c5bf;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .progress {
+    margin-top: 9px;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(207, 67, 2, 0.18);
+  }
+
+  .bar {
+    width: 42%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(207,67,2,0.1), rgba(255,106,33,0.95), rgba(207,67,2,0.1));
+    animation: slide 1.25s infinite ease;
+  }
+
+  #download-section,
+  #error-section {
+    margin-top: 16px;
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  #download-section {
+    border: 1px solid rgba(47, 212, 122, 0.45);
+    background: rgba(5, 35, 19, 0.72);
+  }
+
+  #download-link {
+    display: inline-block;
+    text-decoration: none;
+    margin-top: 10px;
+    background: linear-gradient(145deg, #44e78f, #1da862);
+    color: #03210f;
+  }
+
+  #error-section {
+    border: 1px solid rgba(255, 95, 95, 0.45);
+    background: rgba(42, 9, 9, 0.72);
+    word-break: break-word;
+  }
+
+  .reset-btn {
+    margin-top: 9px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+  }
+
+  .hidden { display: none; }
+
+  footer {
+    margin-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--text-dim);
+    font-size: 0.84rem;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @keyframes slide {
+    0% { transform: translateX(-130%); }
+    100% { transform: translateX(240%); }
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 700px) {
+    .card { padding: 22px; }
+    .topbar { align-items: flex-start; flex-direction: column; gap: 6px; }
+    .status { flex-wrap: wrap; }
+    .status-sub { margin-left: 0; width: 100%; }
+    .row { grid-template-columns: 90px 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="shell">
+  <div class="topbar">
+    <div class="logo">F<span>lux</span></div>
+    <div class="subtitle">Fast and clean file conversion</div>
+  </div>
+
+  <main class="card">
+    <h1 class="headline">Convert files with <b>speed</b> and <b>clarity</b>.</h1>
+    <p class="intro">Upload a file, choose the output format, and download instantly. Flux is optimized for smooth flow and simple control.</p>
+
+    <div id="drop-zone">
+      <div class="drop-mark">+</div>
+      <div class="drop-title">Drop file here or click to browse</div>
+      <div class="drop-sub">Images, audio, video, documents, spreadsheets, and PDFs</div>
+    </div>
+    <input type="file" id="file-input">
+
+    <div class="status">
+      <div class="dot" id="status-dot"></div>
+      <div class="status-main" id="status-text">Waiting for a file</div>
+      <div class="status-sub" id="status-detail"></div>
+    </div>
+
+    <div id="file-info" class="panel hidden">
+      <div class="row"><div class="label">File</div><div id="info-name">-</div></div>
+      <div class="row"><div class="label">Type</div><div id="info-mime">-</div></div>
+      <div class="row"><div class="label">Category</div><div><span class="badge" id="info-cat">-</span></div></div>
+    </div>
+
+    <div id="format-section" class="hidden">
+      <div class="section-title">Select output format</div>
+      <div class="format-grid" id="format-grid"></div>
+    </div>
+
+    <button id="convert-btn" class="hidden">Convert</button>
+
+    <div id="progress-section" class="hidden">
+      <div class="section-title">Converting</div>
+      <div class="progress"><div class="bar"></div></div>
+    </div>
+
+    <div id="download-section" class="hidden">
+      <strong>Conversion complete</strong>
+      <div id="dl-filename" style="margin-top:8px; color: var(--text-dim);"></div>
+      <a id="download-link" href="#" download>Download file</a>
+      <br>
+      <button class="reset-btn" onclick="resetAll()">Convert another file</button>
+    </div>
+
+    <div id="error-section" class="hidden">
+      <strong style="color:#ff9898;">Conversion failed</strong>
+      <div id="error-msg" style="margin-top:8px;"></div>
+      <button class="reset-btn" onclick="resetAll()">Try again</button>
+    </div>
+  </main>
+
+  <footer>
+    <span>Flux converter UI</span>
+    <span>Developed by shreenand Bhattad</span>
+  </footer>
+</div>
+
+<script src="./config.js"></script>
+<script>
+  const API_BASE = (window.FLUX_API_BASE || '').replace(/\/$/, '') || window.location.origin;
+
+  let uploadedFileId = null;
+  let uploadedFilename = null;
+  let selectedFormat = null;
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function show(id) {
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function hide(id) {
+    document.getElementById(id).classList.add('hidden');
+  }
+
+  function setStatus(type, text, detail = '') {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'dot' + (type ? ' ' + type : '');
+    document.getElementById('status-text').textContent = text;
+    document.getElementById('status-detail').textContent = detail;
+  }
+
+  async function handleFile(file) {
+    resetPartial();
+    setStatus('active', 'Uploading and detecting file...', file.name);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+      uploadedFileId = data.file_id;
+      uploadedFilename = data.filename;
+
+      document.getElementById('info-name').textContent = data.filename;
+      document.getElementById('info-mime').textContent = data.mime_type || 'unknown';
+      document.getElementById('info-cat').textContent = data.category;
+      show('file-info');
+
+      if (!data.suggestions || data.suggestions.length === 0) {
+        setStatus('error', 'No output formats available', data.category || 'unknown category');
+        return;
+      }
+
+      const grid = document.getElementById('format-grid');
+      grid.innerHTML = '';
+      selectedFormat = null;
+
+      data.suggestions.forEach((fmt) => {
+        const btn = document.createElement('button');
+        btn.className = 'format-btn';
+        btn.textContent = '.' + fmt;
+        btn.addEventListener('click', () => selectFormat(fmt, btn));
+        grid.appendChild(btn);
+      });
+
+      show('format-section');
+      setStatus('success', 'File ready. Select output format.', `${data.suggestions.length} formats`);
+    } catch (err) {
+      setStatus('error', 'Upload failed', err.message || 'Unknown error');
+    }
+  }
+
+  function selectFormat(fmt, btn) {
+    document.querySelectorAll('.format-btn').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedFormat = fmt;
+
+    const convertBtn = document.getElementById('convert-btn');
+    convertBtn.textContent = 'Convert to .' + fmt.toUpperCase();
+    convertBtn.onclick = doConvert;
+    show('convert-btn');
+
+    setStatus('', 'Ready to convert', 'Target .' + fmt.toLowerCase());
+  }
+
+  async function doConvert() {
+    if (!uploadedFileId || !selectedFormat) return;
+
+    hide('download-section');
+    hide('error-section');
+    hide('convert-btn');
+    show('progress-section');
+    setStatus('active', 'Converting file...', 'to .' + selectedFormat.toLowerCase());
+
+    try {
+      const res = await fetch(`${API_BASE}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_id: uploadedFileId,
+          filename: uploadedFilename,
+          target_format: selectedFormat
+        })
+      });
+
+      hide('progress-section');
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || 'Conversion failed');
+      }
+
+      const blob = await res.blob();
+      const outName = getOutputName(uploadedFilename, selectedFormat);
+      const url = URL.createObjectURL(blob);
+
+      document.getElementById('dl-filename').textContent = outName;
+      const link = document.getElementById('download-link');
+      link.href = url;
+      link.download = outName;
+
+      show('download-section');
+      setStatus('success', 'Conversion complete', outName);
+    } catch (err) {
+      hide('progress-section');
+      document.getElementById('error-msg').textContent = err.message || 'Conversion failed';
+      show('error-section');
+      show('convert-btn');
+      setStatus('error', 'Conversion failed', (err.message || '').slice(0, 72));
+    }
+  }
+
+  function getOutputName(original, targetExt) {
+    const dot = original.lastIndexOf('.');
+    const base = dot >= 0 ? original.slice(0, dot) : original;
+    return base + '.' + targetExt;
+  }
+
+  function resetPartial() {
+    uploadedFileId = null;
+    uploadedFilename = null;
+    selectedFormat = null;
+    hide('file-info');
+    hide('format-section');
+    hide('convert-btn');
+    hide('progress-section');
+    hide('download-section');
+    hide('error-section');
+  }
+
+  function resetAll() {
+    resetPartial();
+    fileInput.value = '';
+    setStatus('', 'Waiting for a file');
+  }
+</script>
+</body>
+</html>
