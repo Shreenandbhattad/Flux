@@ -14,6 +14,11 @@ A web-based file conversion tool built with FastAPI. Upload any supported file, 
 | Presentation | pptx, ppt, odp             | pdf, odp, pptx                |
 | PDF          | pdf                        | png, jpg, txt                 |
 
+## Project Link
+
+Use the project here: https://flux-n5zw.onrender.com/
+
+
 ## Quick Start (Docker)
 
 ```bash
@@ -45,22 +50,9 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 Open http://localhost:8000
 
-## Deploy Frontend on GitHub Pages
 
-This project includes a static frontend in `docs/` for GitHub Pages.
 
-1. Push repo to GitHub.
-2. In GitHub repo settings: `Pages -> Build and deployment -> Deploy from a branch`.
-3. Select branch: `main` and folder: `/docs`.
-4. Edit `docs/config.js` and set:
-
-```js
-window.FLUX_API_BASE = "https://your-backend-url";
-```
-
-5. Commit and push.
-
-## Deploy Backend (Free Option)
+## Deploy Backend 
 
 GitHub Pages cannot run FastAPI/Python backend code. You must host backend separately.
 
